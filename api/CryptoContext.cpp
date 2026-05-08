@@ -264,6 +264,34 @@ void CryptoContextImpl<DCRTPoly>::LoadCiphertext(Ciphertext<DCRTPoly>& ct) {
 	ct->original_level								   = this->multiplicative_depth - ct->GetLevel();
 }
 
+void CryptoContextImpl<DCRTPoly>::UnloadCiphertext(Ciphertext<DCRTPoly>& ct) {
+    if (!ct->loaded || this->devices.empty()) {
+        return;  // Ya está en CPU o no hay device
+    }
+    
+    auto& ct_cpu = std::any_cast<lbcrypto::Ciphertext<lbcrypto::DCRTPoly>&>(ct->cpu);
+    auto ct_gpu = std::static_pointer_cast<FIDESlib::CKKS::Ciphertext>(
+        this->GetDeviceCiphertext(ct->gpu)
+    );
+    
+    FIDESlib::CKKS::RawCipherText raw_ct;
+    ct_gpu->store(raw_ct);
+    
+    // Asegurar que ct_cpu tiene los niveles necesarios (ver línea 575-585 de Decrypt)
+    // Si el GPU está en un nivel más bajo que el CPU template, ajustar.
+    size_t cpu_levels = ct_cpu->GetElements()[0].GetAllElements().size();
+    size_t gpu_levels = raw_ct.numRes;
+    if (cpu_levels < gpu_levels) {
+        // Falta lógica si el ct CPU no tiene espacio. 
+        // Decrypt rellena con un Encrypt de pt dummy, pero nosotros NO tenemos sk.
+        // Opción: throw, opción: el caller debe garantizar que el cpu template
+        // se creó con suficientes niveles. Discutir con Alberto.
+        OPENFHE_THROW("UnloadCiphertext: CPU ct has fewer levels than GPU.");
+    }
+    
+    FIDESlib::CKKS::GetOpenFHECipherText(ct_cpu, raw_ct);
+}
+
 // ---- Key Generation ----
 
 KeyPair<DCRTPoly> CryptoContextImpl<DCRTPoly>::KeyGen() {
