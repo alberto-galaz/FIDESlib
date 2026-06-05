@@ -440,33 +440,23 @@ const std::vector<double>& coefficients, double a, double b) const {
 		T2[i] = &T2_[i];
 */
 	T[0]->copy(ctxt);
-	/*
-	// computes linear transformation y = -1 + 2 (x-a)/(b-a)
-	// consumes one level when a <> -1 && b <> 1
-	auto cc = x->GetCryptoContext();
-	std::vector<Ciphertext<DCRTPoly>> T(k);
-	if ((a - std::round(a) < 1e-10) && (b - std::round(b) < 1e-10) && (std::round(a) == -1) && (std::round(b) == 1)) {
-		// no linear transformation is needed if a = -1, b = 1
-		// T_1(y) = y
-		T[0] = x->Clone();
+		// FIX: linear transformation y = -1 + 2(x-a)/(b-a) maps [a,b] -> [-1,1].
+	// The Chebyshev coefficients are calibrated for T_k(y) with y in [-1,1].
+	// Without this remap T_k(x) is evaluated on x in [a,b], and for |x|>1 the
+	// recurrence T_k(x) grows like |x|^k, so the polynomial blows up.
+	if (!((std::round(lower_bound) == -1 && std::round(upper_bound) == 1) &&
+	      std::abs(lower_bound - std::round(lower_bound)) < 1e-10 &&
+	      std::abs(upper_bound - std::round(upper_bound)) < 1e-10)) {
+		double alpha = 2.0 / (upper_bound - lower_bound);
+		double beta  = 2.0 * lower_bound / (upper_bound - lower_bound);
+		T[0]->multScalar(alpha, true);     // T[0] = alpha * x, with rescale
+		T[0]->addScalar(-1.0 - beta);      // T[0] += -1 - beta
 	}
-	else {
-		// linear transformation is needed
-		double alpha = 2 / (b - a);
-		double beta  = 2 * a / (b - a);
-
-		T[0] = cc->EvalMult(x, alpha);
-		cc->ModReduceInPlace(T[0]);
-		cc->EvalAddInPlace(T[0], -1.0 - beta);
-	}
-	*/
 	// Ciphertext y(cc);
 	// y.copy(T[0]);
 
 	// if (ctxt.NoiseLevel == 1)
 	//     ctxt.multScalar(1.0);
-	if (T[0]->NoiseLevel == 2)
-		T[0]->rescale();
 	for (uint32_t i = 2; i <= k; i++) {
 		// if i is a power of two
 		if constexpr (sync)
@@ -482,7 +472,7 @@ const std::vector<double>& coefficients, double a, double b) const {
 			ctxt.adjustForAddOrSub(*T[i - 1]);
 			if (ctxt.NoiseLevel == 1)
 				T[i - 1]->rescale();
-			T[i - 1]->sub(ctxt);
+			T[i - 1]->sub(*T[0]);  // FIX: was sub(ctxt) -- bug when ctxt != T[0] (asymmetric bounds). Formula: T_{2i+1}=2*T_i*T_{i+1}-y, and y=T[0] not the original input.
 			// if (ctxt.NoiseLevel == 2)
 			//     T[i - 1]->rescale();
 		} else {
@@ -680,7 +670,9 @@ const std::vector<double>& coefficients, double a, double b) const {
 
 	if constexpr (true) {
 		Ciphertext out(cc_);
-		innerEvalChebyshevPS(ctxt, ctxt, f2, k, m, T, T2, 0, m);
+		Ciphertext out_copy(cc_);
+		innerEvalChebyshevPS(ctxt, out_copy, f2, k, m, T, T2, 0, m);
+		ctxt.copy(out_copy);
 		// ctxt.copy(out);
 	}
 
