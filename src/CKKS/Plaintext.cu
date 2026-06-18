@@ -287,18 +287,19 @@ void Plaintext::rotate_hoisted(const std::vector<int>& indexes, std::vector<Plai
 
 void Plaintext::multPt(const Plaintext& b, bool rescale) {
     CudaNvtxRange r(std::string{sc::current().function_name()}.substr());
+    CKKS::SetCurrentContext(cc_);
 
-    if (cc.rescaleTechnique == Context::FIXEDAUTO || cc.rescaleTechnique == Context::FLEXIBLEAUTO ||
-        cc.rescaleTechnique == Context::FLEXIBLEAUTOEXT) {
+    if (cc.rescaleTechnique == FIXEDAUTO || cc.rescaleTechnique == FLEXIBLEAUTO ||
+        cc.rescaleTechnique == FLEXIBLEAUTOEXT) {
         if (NoiseLevel == 2)
             this->rescale();
     }
 
-    if (cc.rescaleTechnique == Context::FIXEDAUTO || cc.rescaleTechnique == Context::FLEXIBLEAUTO ||
-        cc.rescaleTechnique == Context::FLEXIBLEAUTOEXT) {
-        // if (b.c0.getLevel() != this.getLevel() || b.NoiseLevel == 2 /*!hasSameScalingFactor(b)*/) {
+    if (cc.rescaleTechnique == FIXEDAUTO || cc.rescaleTechnique == FLEXIBLEAUTO ||
+        cc.rescaleTechnique == FLEXIBLEAUTOEXT) {
         if (!hasSameScalingFactor(b)) {
-            Plaintext b_(cc);
+            Plaintext b_(cc_);
+            b_.copy(b);
             if (NoiseLevel == 2)
                 this->rescale();
             if (b_.NoiseLevel == 2)
@@ -310,12 +311,10 @@ void Plaintext::multPt(const Plaintext& b, bool rescale) {
 
     assert(NoiseLevel < 2);
     assert(b.NoiseLevel < 2);
-    c0.multPt(b.c0, rescale && cc.rescaleTechnique == CKKS::Context::FIXEDMANUAL);
+    c0.multPt(b.c0, rescale && cc.rescaleTechnique == CKKS::FIXEDMANUAL);
 
-    // Manage metadata
-    NoiseLevel += b.NoiseLevel;
-    NoiseFactor *= b.NoiseFactor;
-    if (rescale && cc.rescaleTechnique == CKKS::Context::FIXEDMANUAL) {
+    multMetadata(*this, b);
+    if (rescale && cc.rescaleTechnique == CKKS::FIXEDMANUAL) {
         NoiseFactor /= cc.param.ModReduceFactor.at(c0.getLevel() + 1);
         NoiseLevel -= 1;
     }
