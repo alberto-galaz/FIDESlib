@@ -25,7 +25,9 @@ project(llm)
 
 ############### 2. PATH DEFINITIONS ###############
 
-set(MY_OPENFHE_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../../deps/openfhe-install")
+if(NOT DEFINED MY_OPENFHE_ROOT)
+    set(MY_OPENFHE_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../../deps/openfhe-install")
+endif()
 set(MY_OPENFHE_INC  "${MY_OPENFHE_ROOT}/include/openfhe")
 set(MY_OPENFHE_LIB  "${MY_OPENFHE_ROOT}/lib")
 
@@ -103,16 +105,9 @@ set(OPENFHE_STATIC_LIBS
 # Create Static Helper Library 'llm'
 add_library(llm STATIC ${CXX_SOURCE_FILES} ${CUDA_SOURCE_FILES})
 
-# Ensure gtest headers are visible to llm sources and consumers
-target_include_directories(llm PUBLIC
-    ${gtest_SOURCE_DIR}/googletest/include
-    ${gtest_BINARY_DIR}/googletest/include
-)
-
 target_link_libraries(llm PRIVATE fideslib::fideslib)
 target_link_libraries(llm PUBLIC OpenMP::OpenMP_CXX)
 target_link_libraries(llm PUBLIC ${OPENFHE_STATIC_LIBS})
-target_link_libraries(llm PRIVATE GTest::gtest GTest::gtest_main)
 
 # Make headers visible to downstream consumers (sleipnir bindings, gungnir, etc.)
 # When built in-tree: include from src/.   When installed: include/llm/.

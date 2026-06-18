@@ -285,7 +285,6 @@ void Plaintext::rotate_hoisted(const std::vector<int>& indexes, std::vector<Plai
     }
 }
 
-#if false
 void Plaintext::multPt(const Plaintext& b, bool rescale) {
     CudaNvtxRange r(std::string{sc::current().function_name()}.substr());
 
@@ -329,7 +328,14 @@ void Plaintext::addPt(const Plaintext& c) {
     c0.add(c.c0);
 }
 
-#endif
+void Plaintext::multPt(const Plaintext& b, const Plaintext& c, bool rescale) {
+    copy(b);
+    multPt(c, rescale);
+}
+
+bool Plaintext::hasSameScalingFactor(const Plaintext& b) const {
+    return NoiseFactor > b.NoiseFactor * (1 - 1e-9) && NoiseFactor < b.NoiseFactor * (1 + 1e-9);
+}
 
 void Plaintext::rescale() {
     CudaNvtxRange r(std::string{sc::current().function_name()}.substr());
