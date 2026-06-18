@@ -114,6 +114,13 @@ target_link_libraries(llm PUBLIC OpenMP::OpenMP_CXX)
 target_link_libraries(llm PUBLIC ${OPENFHE_STATIC_LIBS})
 target_link_libraries(llm PRIVATE GTest::gtest GTest::gtest_main)
 
+# Make headers visible to downstream consumers (sleipnir bindings, gungnir, etc.)
+# When built in-tree: include from src/.   When installed: include/llm/.
+target_include_directories(llm PUBLIC
+    $<BUILD_INTERFACE:${SOURCE_DIR}>
+    $<INSTALL_INTERFACE:include/llm>
+)
+
 target_compile_options(llm PRIVATE
     $<$<COMPILE_LANGUAGE:CXX>:-Wall>
     $<$<COMPILE_LANGUAGE:CUDA>:-lineinfo -Xcompiler=-Wall -rdc=true -diag-suppress 611>
@@ -151,4 +158,48 @@ set_target_properties(berttiny-simple PROPERTIES
     CUDA_RESOLVE_DEVICE_SYMBOLS ON
     CUDA_SEPARABLE_COMPILATION ON
     POSITION_INDEPENDENT_CODE ON
+)
+
+############### 6. Install rules ###############
+# Expose `llm` as a consumable CMake package so downstream projects (e.g.
+# sleipnir's pybind11 module) can `find_package(llm)` and link against it
+# instead of re-compiling these sources themselves.
+include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
+
+install(TARGETS llm
+    EXPORT llmTargets
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+)
+
+install(DIRECTORY ${SOURCE_DIR}/
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/llm
+    FILES_MATCHING
+        PATTERN "*.h"
+        PATTERN "*.hpp"
+        PATTERN "*.cuh"
+        PATTERN "python" EXCLUDE
+)
+
+install(EXPORT llmTargets
+    FILE llmTargets.cmake
+    NAMESPACE llm::
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/llm
+)
+
+# Minimal llmConfig.cmake so `find_package(llm)` works in downstream projects.
+file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/llmConfig.cmake.in"
+"@PACKAGE_INIT@\n"
+"include(\"\${CMAKE_CURRENT_LIST_DIR}/llmTargets.cmake\")\n"
+"check_required_components(llm)\n"
+)
+configure_package_config_file(
+    "${CMAKE_CURRENT_BINARY_DIR}/llmConfig.cmake.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/llmConfig.cmake"
+    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/llm
+)
+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/llmConfig.cmake"
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/llm
 )
