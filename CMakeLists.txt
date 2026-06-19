@@ -108,7 +108,7 @@ endif ()
 
 # Check for NCCL installation. Do not do anything more. It is managed by CUDA. This is just to
 # enable conditional NCCL-dependent code.
-find_library(nccl_FOUND NAMES nccl HINTS  /usr/local/cuda/lib64 /usr/lib /usr/local/lib)
+find_library(nccl_FOUND NAMES nccl HINTS  /usr/local/cuda/lib64 /usr/lib lib)
 if (nccl_FOUND)
   message(STATUS "Found NCCL: ${nccl_FOUND}")
   add_compile_definitions(MULTI_GPU NCCL RCCL)
@@ -166,7 +166,7 @@ endif ()
 
 ############### Configuration export ###################
 
-set(CMAKE_INSTALL_PREFIX "${FIDESLIB_INSTALL_PREFIX}")
+# # # # set(CMAKE_INSTALL_PREFIX "${FIDESLIB_INSTALL_PREFIX}")
 
 set(INSTALL_INCLUDE_DIR "${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME}")
 set(INSTALL_LIBRARY_DIR "${CMAKE_INSTALL_LIBDIR}")

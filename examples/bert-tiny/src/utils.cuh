@@ -2,6 +2,9 @@
 #define FIDESLIB_BERT_TINY_UTILS_CUH
 
 #include <openfhe.h>
+#ifdef duration
+#undef duration
+#endif
 #include <cstdlib>
 #include <filesystem>
 #include <string>
@@ -12,7 +15,6 @@
 #include "CKKS/Context.cuh"
 #include "CKKS/openfhe-interface/RawCiphertext.cuh"
 #include "CKKS/forwardDefs.cuh"
-#include "../test/ParametrizedTest.cuh"
 
 #include "MatMul.cuh"
 #include "PolyApprox.cuh"
