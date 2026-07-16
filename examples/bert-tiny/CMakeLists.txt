@@ -15,7 +15,7 @@ if (NOT EXISTS "${CUDA_PATH}")
     message(FATAL_ERROR "CUDA not found at ${CUDA_PATH}. Please install CUDA.")
 endif ()
 
-set(CMAKE_CUDA_ARCHITECTURES "70-real;80-real;86-real;89-real;90-real")
+set(CMAKE_CUDA_ARCHITECTURES "70-real;80-real;86-real;89-real;90-real;90-virtual")
 set(CMAKE_CUDA_STANDARD 20)
 set(CMAKE_CUDA_STANDARD_REQUIRED ON)
 set(CMAKE_CUDA_EXTENSIONS ON)
