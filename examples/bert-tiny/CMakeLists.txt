@@ -15,7 +15,13 @@ if (NOT EXISTS "${CUDA_PATH}")
     message(FATAL_ERROR "CUDA not found at ${CUDA_PATH}. Please install CUDA.")
 endif ()
 
-set(CMAKE_CUDA_ARCHITECTURES "70-real;80-real;86-real;89-real;90-real;90-virtual")
+# Respect -DCMAKE_CUDA_ARCHITECTURES from the caller (sleipnir's
+# build_fideslib.sh passes its own list, e.g. adding 120-real for
+# Blackwell when nvcc supports it). This plain set() used to shadow
+# the cache variable, silently discarding the caller's list.
+if (NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
+    set(CMAKE_CUDA_ARCHITECTURES "70-real;80-real;86-real;89-real;90-real")
+endif()
 set(CMAKE_CUDA_STANDARD 20)
 set(CMAKE_CUDA_STANDARD_REQUIRED ON)
 set(CMAKE_CUDA_EXTENSIONS ON)
