@@ -102,8 +102,12 @@ set(OPENFHE_STATIC_LIBS
     "${MY_OPENFHE_LIB}/libOPENFHEcore_static.a"
 )
 
-# Create Static Helper Library 'llm'
-add_library(llm STATIC ${CXX_SOURCE_FILES} ${CUDA_SOURCE_FILES})
+# Shared library: nvcc-compiled objects contain hidden-visibility
+# references to cereal template statics. As a .a linked into a
+# pybind11 .so, these PC32 relocations can't be resolved against
+# the dynamic libOPENFHE. As a .so, the cereal statics resolve
+# internally at llm link time against the static OpenFHE archives.
+add_library(llm SHARED ${CXX_SOURCE_FILES} ${CUDA_SOURCE_FILES})
 
 target_link_libraries(llm PRIVATE fideslib::fideslib)
 target_link_libraries(llm PUBLIC OpenMP::OpenMP_CXX)
